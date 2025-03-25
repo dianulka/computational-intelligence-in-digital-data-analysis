@@ -91,3 +91,13 @@ class Forward_STRIPS(Search_problem):
 # s1 = SearcherMPP(Forward_STRIPS(stripsProblem.problem1))  #A*
 # s1.search()  #find another plan
 
+from searchBranchAndBound import DF_branch_and_bound
+from searchMPP import SearcherMPP
+import stripsProblem
+
+SearcherMPP(Forward_STRIPS(stripsProblem.blocks4)).search()  #A* with MPP
+DF_branch_and_bound(Forward_STRIPS(stripsProblem.blocks4), 10).search() #B&B
+# To find more than one plan:
+s1 = SearcherMPP(Forward_STRIPS(stripsProblem.blocks4))  #A*
+s1.search()  #find another plan
+
