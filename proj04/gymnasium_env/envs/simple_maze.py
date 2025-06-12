@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import pygame
+import os
 
 
 class SimpleMazeEnv(gym.Env):
@@ -19,18 +20,42 @@ class SimpleMazeEnv(gym.Env):
         self.window = None
         self.clock = None
 
+        tile_size = 25
+        self.tile_size = tile_size
+
+        base_path = os.path.join("gymnasium_env", "envs", "img")
+        self.images = {
+            2: pygame.transform.scale(pygame.image.load(os.path.join(base_path, "reward.png")), (tile_size, tile_size)),
+            3: pygame.transform.scale(pygame.image.load(os.path.join(base_path, "penalty.png")),
+                                      (tile_size, tile_size)),
+            9: pygame.transform.scale(pygame.image.load(os.path.join(base_path, "meta.png")), (tile_size, tile_size)),
+            "agent": pygame.transform.scale(pygame.image.load(os.path.join(base_path, "agent.png")),
+                                            (tile_size, tile_size)),
+        }
+
     def _generate_maze(self):
         self.grid[:] = 0
         self.grid[19, 19] = 9
-        walls = [(i, 5) for i in range(1, 15)] + [(15, j) for j in range(5, 15)] + \
-                [(i, 14) for i in range(5, 19)] + [(5, j) for j in range(6, 14)] + \
-                [(10, j) for j in range(0, 10)] + [(j, 10) for j in range(11, 19)] + \
-                [(8, 8), (8, 9), (8, 10), (8, 11), (12, 12), (13, 12), (14, 12), (15, 12)]
+
+        walls = (
+                [(i, 3) for i in range(1, 10)] +
+                [(9, j) for j in range(3, 12)] +
+                [(i, 11) for i in range(10, 18)] +
+                [(17, j) for j in range(6, 16)] +
+                [(i, 6) for i in range(5, 17)] +
+                [(5, j) for j in range(6, 10)] +
+                [(13, j) for j in range(0, 5)] +
+                [(j, 15) for j in range(3, 10)] +
+                [(11, 13), (11, 14), (12, 14), (13, 14)]
+        )
+
         for x, y in walls:
             self.grid[x, y] = 1
-        for x, y in [(2, 2), (4, 18), (10, 16), (17, 1)]:
+
+        for x, y in [(1, 1), (7, 17), (14, 2), (18, 18)]:
             self.grid[x, y] = 2
-        for x, y in [(6, 6), (12, 7), (18, 10), (15, 3)]:
+
+        for x, y in [(3, 7), (11, 5), (16, 12), (5, 17)]:
             self.grid[x, y] = 3
 
     def reset(self, seed=None, options=None):
@@ -51,7 +76,7 @@ class SimpleMazeEnv(gym.Env):
         tile = self.grid[x, y]
         reward, done = -0.2, False
         if tile == 2:
-            reward = 5
+            reward = 20
             self.grid[x, y] = 0
         elif tile == 3:
             reward = -2
@@ -62,27 +87,32 @@ class SimpleMazeEnv(gym.Env):
         return np.array(self.agent_pos), reward, done, False, {}
 
     def render(self):
-        tile_size = 25
         if self.window is None:
-            pygame.init()
-            self.window = pygame.display.set_mode((self.grid_size[1] * tile_size, self.grid_size[0] * tile_size))
+            self.window = pygame.display.set_mode(
+                (self.grid_size[1] * self.tile_size, self.grid_size[0] * self.tile_size))
             pygame.display.set_caption("Maze Agent")
+
         if self.clock is None:
             self.clock = pygame.time.Clock()
 
-        canvas = pygame.Surface((self.grid_size[1] * tile_size, self.grid_size[0] * tile_size))
+        canvas = pygame.Surface((self.grid_size[1] * self.tile_size, self.grid_size[0] * self.tile_size))
         canvas.fill((255, 255, 255))
-        colors = {0: (255, 255, 255), 1: (0, 0, 0), 2: (0, 255, 0), 3: (128, 0, 128), 9: (255, 0, 0)}
+
         for i in range(self.grid_size[0]):
             for j in range(self.grid_size[1]):
-                pygame.draw.rect(canvas, colors.get(self.grid[i, j], (200, 200, 200)),
-                                 pygame.Rect(j * tile_size, i * tile_size, tile_size, tile_size))
+                tile_type = self.grid[i, j]
+                if tile_type in self.images:
+                    canvas.blit(self.images[tile_type], (j * self.tile_size, i * self.tile_size))
+                elif tile_type == 1:
+                    pygame.draw.rect(canvas, (0, 0, 0),
+                                     pygame.Rect(j * self.tile_size, i * self.tile_size, self.tile_size,
+                                                 self.tile_size))
+
         ax, ay = self.agent_pos
-        pygame.draw.rect(canvas, (0, 0, 255), pygame.Rect(ay * tile_size, ax * tile_size, tile_size, tile_size))
+        canvas.blit(self.images["agent"], (ay * self.tile_size, ax * self.tile_size))
 
         self.window.blit(canvas, (0, 0))
         pygame.display.update()
-
         self.clock.tick(5)
 
     def close(self):
